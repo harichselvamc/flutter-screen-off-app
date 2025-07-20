@@ -1,5 +1,8 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart'; // add google_fonts to pubspec.yaml
 
 void main() {
   runApp(const ScreenOffApp());
@@ -14,35 +17,21 @@ class ScreenOffApp extends StatelessWidget {
       title: 'Screen Off App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primaryColor: Colors.black,
-        scaffoldBackgroundColor: Colors.transparent,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          titleTextStyle: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          iconTheme: IconThemeData(color: Colors.white),
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blueGrey,
+          brightness: Brightness.dark,
         ),
-        textTheme: const TextTheme(
-          bodyMedium: TextStyle(color: Colors.white, fontSize: 16),
-        ),
+        textTheme: GoogleFonts.robotoTextTheme(ThemeData.dark().textTheme),
+        scaffoldBackgroundColor: Colors.black,
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.black,
-            foregroundColor: Colors.white,
-            elevation: 6,
-            shadowColor: Colors.black45,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            shape: const StadiumBorder(),
+            elevation: 4,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
             textStyle: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
             ),
           ),
         ),
@@ -61,31 +50,43 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   static const platform = MethodChannel('screen_off_channel');
-  late AnimationController _buttonAnimationController;
-  late Animation<double> _buttonScaleAnimation;
+
+  // Separate controllers so buttons can animate independently
+  late final AnimationController _lockController;
+  late final AnimationController _fakeController;
+  late final Animation<double> _lockScale;
+  late final Animation<double> _fakeScale;
 
   @override
   void initState() {
     super.initState();
-    _buttonAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 200),
+    _lockController = AnimationController(
       vsync: this,
+      duration: const Duration(milliseconds: 100),
+      lowerBound: 0.95,
+      upperBound: 1.0,
+      value: 1.0,
     );
-    _buttonScaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(
-        parent: _buttonAnimationController,
-        curve: Curves.easeInOut,
-      ),
+    _fakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+      lowerBound: 0.95,
+      upperBound: 1.0,
+      value: 1.0,
     );
+    _lockScale = _lockController;
+    _fakeScale = _fakeController;
   }
 
   @override
   void dispose() {
-    _buttonAnimationController.dispose();
+    _lockController.dispose();
+    _fakeController.dispose();
     super.dispose();
   }
 
   Future<void> _turnScreenOff() async {
+    HapticFeedback.lightImpact();
     try {
       await platform.invokeMethod('turnOffScreen');
     } on PlatformException catch (e) {
@@ -94,6 +95,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Future<void> _simulateScreenOff() async {
+    HapticFeedback.lightImpact();
     try {
       await platform.invokeMethod('simulateScreenOff');
     } on PlatformException catch (e) {
@@ -101,114 +103,117 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
+  Widget _buildButton({
+    required AnimationController controller,
+    required Animation<double> scale,
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+    required Color color,
+  }) {
+    return ScaleTransition(
+      scale: scale,
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          minimumSize: const Size.fromHeight(56),
+        ),
+        icon: Icon(icon, size: 28),
+        label: Text(label),
+        onPressed: () {
+          controller.reverse().then((_) {
+            controller.forward();
+            onPressed();
+          });
+        },
+        onLongPress: () => controller.reverse().then((_) => controller.forward()),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: const Text('Screen Off'),
-        centerTitle: true,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.black87, Colors.black54],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      body: Stack(
+        children: [
+          // Gradient background
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [scheme.primary, scheme.secondary],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
             ),
           ),
-        ),
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.black54, Colors.grey],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-            child: Card(
-              elevation: 8,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              color: Colors.white.withOpacity(0.9),
+          // SafeArea + centered card
+          SafeArea(
+            child: Center(
               child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.power_settings_new,
-                      size: 80,
-                      color: Colors.black,
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Control Your Screen',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: Colors.white.withOpacity(0.25)),
+                      ),
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.power_settings_new, size: 80, color: scheme.onPrimary),
+                          const SizedBox(height: 24),
+                          Text(
+                            'Control Your Screen',
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  color: scheme.onPrimary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(height: 32),
+                          _buildButton(
+                            controller: _lockController,
+                            scale: _lockScale,
+                            icon: Icons.lock_outline,
+                            label: 'Lock Device',
+                            onPressed: _turnScreenOff,
+                            color: scheme.primary,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildButton(
+                            controller: _fakeController,
+                            scale: _fakeScale,
+                            icon: Icons.visibility_off_outlined,
+                            label: 'Fake Screen Off',
+                            onPressed: _simulateScreenOff,
+                            color: scheme.secondary,
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            '• "Lock Device" locks with admin (PIN only).\n'
+                            '• "Fake Screen Off" dims screen (tap to wake).',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Colors.white70,
+                                  height: 1.4,
+                                ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    ScaleTransition(
-                      scale: _buttonScaleAnimation,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          _buttonAnimationController.forward().then((_) {
-                            _buttonAnimationController.reverse();
-                            _turnScreenOff();
-                          });
-                        },
-                        icon: const Icon(Icons.lock_outline, size: 24),
-                        label: const Text('Lock Device'),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 56),
-                          backgroundColor: Colors.black,
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ScaleTransition(
-                      scale: _buttonScaleAnimation,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          _buttonAnimationController.forward().then((_) {
-                            _buttonAnimationController.reverse();
-                            _simulateScreenOff();
-                          });
-                        },
-                        icon: const Icon(Icons.visibility_off_outlined, size: 24),
-                        label: const Text('Fake Screen Off'),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 56),
-                          backgroundColor: Colors.black,
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      '• "Lock Device" locks with admin (PIN only).\n'
-                      '• "Fake Screen Off" dims screen (tap to wake).',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[900],
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
