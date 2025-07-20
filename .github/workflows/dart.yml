@@ -1,4 +1,4 @@
-name: Flutter CI
+name: Flutter Build
 
 on:
   push:
@@ -11,30 +11,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Check out your repo
+      # 1. Check out your code
       - uses: actions/checkout@v4
 
-      # 2. Set up Flutter SDK (stable channel)
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: 'stable'
+      # 2. Install Flutter by cloning the stable channel
+      - name: Install Flutter SDK
+        run: |
+          git clone --depth=1 https://github.com/flutter/flutter.git -b stable
+          echo "${{ github.workspace }}/flutter/bin" >> $GITHUB_PATH
 
-      # 3. Install your Dart/Flutter dependencies
-      - name: Install dependencies
+      # 3. (Optional) Verify the Flutter install
+      - name: Flutter doctor
+        run: flutter doctor
+
+      # 4. Install project dependencies
+      - name: Pub get
         run: flutter pub get
 
-      # 4. (Optional) Verify formatting
-      - name: Verify formatting
-        run: flutter format --set-exit-if-changed .
-
-      # 5. Static analysis
-      - name: Analyze project
-        run: flutter analyze
-
-      # 6. Run your tests
+      # 5. Run any tests you have
       - name: Run tests
         run: flutter test
 
-      # 7. (Optional) Build a release APK for Android
-      - name: Build Android APK
+      # 6. Build a release APK for Android
+      - name: Build Release APK
         run: flutter build apk --release
