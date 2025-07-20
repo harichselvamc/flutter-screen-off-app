@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart'; // add google_fonts to pubspec.yaml
+import 'package:google_fonts/google_fonts.dart';
 
 void main() {
   runApp(const ScreenOffApp());
@@ -27,12 +27,13 @@ class ScreenOffApp extends StatelessWidget {
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             shape: const StadiumBorder(),
-            elevation: 4,
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+            elevation: 6,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
             textStyle: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
+            shadowColor: Colors.black54,
           ),
         ),
       ),
@@ -51,7 +52,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   static const platform = MethodChannel('screen_off_channel');
 
-  // Separate controllers so buttons can animate independently
   late final AnimationController _lockController;
   late final AnimationController _fakeController;
   late final Animation<double> _lockScale;
@@ -117,10 +117,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(56),
+          minimumSize: const Size.fromHeight(60),
+          shadowColor: Colors.black45,
+          elevation: 6,
         ),
         icon: Icon(icon, size: 28),
-        label: Text(label),
+        label: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         onPressed: () {
           controller.reverse().then((_) {
             controller.forward();
@@ -139,7 +147,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          // Gradient background
+          // Gradient background with a soft overlay for a modern look
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -149,35 +157,44 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               ),
             ),
           ),
-          // SafeArea + centered card
+          // Foreground content with safe area
           SafeArea(
             child: Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(20),
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: Colors.white.withOpacity(0.25)),
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white.withOpacity(0.2)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 12,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      padding: const EdgeInsets.all(32),
+                      padding: const EdgeInsets.all(24),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.power_settings_new, size: 80, color: scheme.onPrimary),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 20),
                           Text(
                             'Control Your Screen',
                             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                   color: scheme.onPrimary,
                                   fontWeight: FontWeight.bold,
                                 ),
+                            textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 28),
+                          // Buttons with modern elevated style
                           _buildButton(
                             controller: _lockController,
                             scale: _lockScale,
@@ -196,13 +213,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             color: scheme.secondary,
                           ),
                           const SizedBox(height: 24),
+                          // Descriptive text
                           Text(
                             '• "Lock Device" locks with admin (PIN only).\n'
                             '• "Fake Screen Off" dims screen (tap to wake).',
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   color: Colors.white70,
-                                  height: 1.4,
+                                  height: 1.5,
                                 ),
                           ),
                         ],
