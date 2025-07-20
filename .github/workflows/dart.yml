@@ -11,8 +11,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout your repository
-      - uses: actions/checkout@v4
+      # 1. Checkout your repository (persist-credentials is true by default)
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       # 2. Install Flutter SDK (stable channel)
       - name: Install Flutter SDK
@@ -21,7 +22,7 @@ jobs:
           echo "$HOME/flutter/bin" >> $GITHUB_PATH
           echo "$HOME/flutter/bin/cache/dart-sdk/bin" >> $GITHUB_PATH
 
-      # 3. Get Flutter dependencies
+      # 3. Fetch dependencies
       - name: Flutter pub get
         run: flutter pub get
 
@@ -29,9 +30,19 @@ jobs:
       - name: Build Release APK
         run: flutter build apk --release
 
-      # 5. Upload the APK as an artifact
+      # 5. Upload the APK as an artifact (uses v4 to avoid deprecation)
       - name: Upload APK Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      # 6. Commit the APK back to the repo (optional, will bloat your history)
+      # - name: Add APK to repo
+      #   run: |
+      #     git config user.name "github-actions"
+      #     git config user.email "actions@github.com"
+      #     cp build/app/outputs/flutter-apk/app-release.apk .
+      #     git add app-release.apk
+      #     git commit -m "Add latest release APK" || echo "No changes to commit"
+      #     git push
